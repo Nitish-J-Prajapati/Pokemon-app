@@ -5,15 +5,8 @@ import Filter from '@/app/components/Filter';
 import PokemonCard from '@/app/components/PokemonCard';
 import { fetchAllPokemon } from '@/app/lib/fetchPokemon';
 
-type Pokemon = {
-  id: number;
-  name: string;
-  type: string[];
-  image: string;
-};
-
 export default function Dashboard() {
-  const [allPokemon, setAllPokemon] = useState<Pokemon[]>([]);
+  const [allPokemon, setAllPokemon] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -49,7 +42,24 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 justify-center">
         {currentPagePokemon.map((p: any) => (
-          <PokemonCard key={p.id} pokemon={p} />
+          <div key={p.id} className="bg-black p-4 rounded shadow-md">
+            <img src={p.image} alt={p.name} className="w-24 h-24 mx-auto" />
+            <h3 className="text-center text-lg font-semibold mt-2 capitalize">Name: {p.name}</h3>
+            <p className="text-center text-sm text-gray-600">Types: {p.type.join(', ')}</p>
+            <div className="text-sm mt-2 space-y-1">
+              <p>Height: {p.height}</p>
+              <p>Weight: {p.weight}</p>
+              <p>Base Exp: {p.base_experience}</p>
+              <p>Abilities: {p.abilities.join(', ')}</p>
+              <p>Forms: {p.forms.join(', ')}</p>
+              <p>Stats:</p>
+              <ul className="ml-4 list-disc">
+                {p.stats.map((s: any, idx: number) => (
+                  <li key={idx}>{s.name}: {s.value}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
         ))}
       </div>
 

@@ -1,26 +1,79 @@
-'use client';
-import { useEffect, useState } from 'react';
-import Navbar from '@/app/components/Navbar';
-import Filter from '@/app/components/Filter';
-import PokemonCard from '@/app/components/PokemonCard';
-import { fetchAllPokemon } from '@/app/lib/fetchPokemon';
+// app/dashboard/page.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Navbar from "@/app/components/Navbar";
+import PokemonCard from "@/app/components/PokemonCard";
+import FilterPanel from "@/app/components/Filter";
+import { fetchAllPokemon } from "@/app/lib/fetchPokemon";
+import { useAuth } from "@/app/context/AuthContext";
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [allPokemon, setAllPokemon] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
+  const [filterState, setFilterState] = useState({
+    type: [] as string[],
+    height: "",
+    weight: "",
+    experience: "",
+    region: "",
+  });
   const [page, setPage] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
 
   useEffect(() => {
-    fetchAllPokemon(200).then(setAllPokemon);
-  }, []);
+    if (!user) {
+      alert("You should do login first");
+      router.replace("/login?error=unauthorized");
+    } else {
+      fetchAllPokemon(200).then(setAllPokemon);
+    }
+  }, [user, router]);
 
-  const filteredPokemon = allPokemon.filter(
-    (p: any) =>
+  if (!user) return null;
+
+  const applyFilters = (p: any) => {
+    const matchesType =
       p.name.toLowerCase().includes(search.toLowerCase()) &&
-      (filter.length === 0 || filter.some((f) => p.type.includes(f)))
-  );
+      (filterState.type.length === 0 ||
+        filterState.type.some((f) => p.type.includes(f)));
+
+    const matchesHeight =
+      !filterState.height ||
+      (filterState.height === "<5" && p.height < 5) ||
+      (filterState.height === "6-20" && p.height >= 6 && p.height <= 20) ||
+      (filterState.height === ">20" && p.height > 20);
+
+    const matchesWeight =
+      !filterState.weight ||
+      (filterState.weight === "<5" && p.weight < 5) ||
+      (filterState.weight === "6-20" && p.weight >= 6 && p.weight <= 20) ||
+      (filterState.weight === ">20" && p.weight > 20);
+
+    const matchesExp =
+      !filterState.experience ||
+      (filterState.experience === "<50" && p.base_experience < 50) ||
+      (filterState.experience === "50-150" &&
+        p.base_experience >= 50 &&
+        p.base_experience <= 150) ||
+      (filterState.experience === ">150" && p.base_experience > 150);
+
+    const matchesRegion =
+      !filterState.region || filterState.region === p.region;
+
+    return (
+      matchesType &&
+      matchesHeight &&
+      matchesWeight &&
+      matchesExp &&
+      matchesRegion
+    );
+  };
+
+  const filteredPokemon = allPokemon.filter(applyFilters);
 
   const totalPages = Math.ceil(filteredPokemon.length / 12);
   const currentPagePokemon = filteredPokemon.slice((page - 1) * 12, page * 12);
@@ -35,34 +88,24 @@ export default function Dashboard() {
 
   return (
     <main className="min-h-screen bg-gray-100">
-      <Navbar onSearch={(text) => { setSearch(text); setPage(1); }} onLogout={() => alert('Log out logic here')} />
+      <Navbar
+        onSearch={(text) => {
+          setSearch(text);
+          setPage(1);
+        }}
+        onLogout={() => {
+          localStorage.removeItem("user");
+          location.href = "/login";
+        }}
+      />{" "}
       <p className="text-center mt-4 text-gray-700">
         Total Cards: {filteredPokemon.length}
       </p>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 justify-center">
         {currentPagePokemon.map((p: any) => (
-          <div key={p.id} className="bg-black p-4 rounded shadow-md">
-            <img src={p.image} alt={p.name} className="w-24 h-24 mx-auto" />
-            <h3 className="text-center text-lg font-semibold mt-2 capitalize">Name: {p.name}</h3>
-            <p className="text-center text-sm text-gray-600">Types: {p.type.join(', ')}</p>
-            <div className="text-sm mt-2 space-y-1">
-              <p>Height: {p.height}</p>
-              <p>Weight: {p.weight}</p>
-              <p>Base Exp: {p.base_experience}</p>
-              <p>Abilities: {p.abilities.join(', ')}</p>
-              <p>Forms: {p.forms.join(', ')}</p>
-              <p>Stats:</p>
-              <ul className="ml-4 list-disc">
-                {p.stats.map((s: any, idx: number) => (
-                  <li key={idx}>{s.name}: {s.value}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <PokemonCard key={p.id} pokemon={p} />
         ))}
       </div>
-
       <div className="flex justify-center items-center space-x-2 my-4">
         <button
           onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
@@ -71,21 +114,20 @@ export default function Dashboard() {
         >
           ⬅
         </button>
-
         {getVisiblePages().map((p) => (
           <button
             key={p}
             onClick={() => setPage(p)}
             className={`px-3 py-1 rounded ${
-              page === p ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-600 border'
+              page === p
+                ? "bg-indigo-600 text-white"
+                : "bg-white text-indigo-600 border"
             }`}
           >
             {p}
           </button>
         ))}
-
         {page + 4 < totalPages && <span className="px-2">...</span>}
-
         <button
           onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
           disabled={page === totalPages}
@@ -94,54 +136,22 @@ export default function Dashboard() {
           ➡
         </button>
       </div>
-
       <button
         onClick={() => setShowFilter(true)}
-        className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-indigo-500 text-white px-4 py-2 rounded-full shadow-lg"
+        className="fixed bottom-15 left-1/2 transform -translate-x-1/2 bg-indigo-500 text-white px-4 py-2 rounded-full shadow-lg"
       >
         Filter
       </button>
-
       {showFilter && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ease-in-out">
-          <div className="bg-white p-6 rounded-lg w-80 animate-fade-in">
-            <h2 className="text-lg font-semibold mb-4">Filter by Type</h2>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {["fire","water","grass","electric","normal","poison","fairy"].map((type) => (
-                <button
-                  key={type}
-                  className={`px-2 py-1 rounded border text-sm ${filter.includes(type) ? 'bg-indigo-200' : ''}`}
-                  onClick={() =>
-                    setFilter((prev) =>
-                      prev.includes(type)
-                        ? prev.filter((t) => t !== type)
-                        : [...prev, type]
-                    )
-                  }
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowFilter(false)}
-                className="bg-gray-300 px-3 py-1 rounded"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  setPage(1);
-                  setShowFilter(false);
-                }}
-                className="bg-indigo-600 text-white px-3 py-1 rounded"
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
+        <FilterPanel
+          filter={filterState}
+          setFilter={setFilterState}
+          onClose={() => setShowFilter(false)}
+          onApply={() => {
+            setPage(1);
+            setShowFilter(false);
+          }}
+        />
       )}
     </main>
   );

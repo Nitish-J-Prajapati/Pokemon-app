@@ -1,9 +1,20 @@
-export default function Home() {
-  return (
-    <main className="flex items-center justify-center min-h-screen">
-      <a href="/dashboard" className="text-blue-600 underline text-xl">
-        Go to Dashboard
-      </a>
-    </main>
-  );
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from './context/AuthContext';
+
+export default function HomePage() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user) {
+      router.replace('/dashboard');
+    } else {
+      router.replace('/login');
+    }
+  }, [user, router]);
+
+  return null;
 }

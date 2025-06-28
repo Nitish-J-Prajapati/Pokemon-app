@@ -1,10 +1,8 @@
 // app/pokemon/[id]/page.tsx
-'use client';
-
-import { notFound, useRouter } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/context/AuthContext';
 
 async function fetchPokemon(id: string) {
   try {
@@ -28,27 +26,14 @@ async function fetchPokemon(id: string) {
   }
 }
 
-export default function PokemonDetailPage({ params }: { params: { id: string } }) {
-  const { user } = useAuth();
-  const router = useRouter();
-  const [pokemon, setPokemon] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export default async function PokemonDetailPage({ params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    redirect('/login?error=unauthorized');
+  }
 
-  useEffect(() => {
-    if (!user) {
-      alert('You should do login first');
-      router.replace('/login?error=unauthorized');
-      return;
-    }
-    fetchPokemon(params.id).then((data) => {
-      setPokemon(data);
-      setLoading(false);
-    });
-  }, [user, params.id, router]);
-
-  if (!user) return null;
-  if (loading) return <div className="text-white p-6">Loading...</div>;
-  if (!pokemon) return notFound();
+  const pokemon = await fetchPokemon(params.id);
+  if (!pokemon) redirect('/dashboard'); // fallback if not found
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">

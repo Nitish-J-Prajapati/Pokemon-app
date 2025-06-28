@@ -1,22 +1,33 @@
-// app/login/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../context/AuthContext';
+import { signIn } from 'next-auth/react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 export default function LoginPage() {
-  const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const errorParam = searchParams.get('error');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (errorParam === 'unauthorized') {
+      setError('You should do login first.');
+    }
+  }, [errorParam]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(email, password);
-    if (success) {
-      router.push('/');
+    const res = await signIn('credentials', {
+      redirect: false,
+      email,
+      password,
+    });
+
+    if (res?.ok) {
+      router.push('/dashboard');
     } else {
       setError('Invalid email or password.');
     }

@@ -5,11 +5,13 @@ import { fetchAllPokemon } from '@/app/lib/fetchPokemon';
 import { parseFiltersFromSearchParams, applyFilters } from '@/app/lib/filterUtils';
 import DashboardClient from './DashboardClient'; // ✅ This import is required
 
-interface Props {
-  searchParams: { [key: string]: string | string[] };
+import { Metadata } from 'next';
+
+interface PageProps {
+  searchParams?: { [key: string]: string | string[] };
 }
 
-export default async function DashboardPage({ searchParams }: Props) {
+export default async function DashboardPage({ searchParams = {} }: PageProps) {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login?error=unauthorized');
 
